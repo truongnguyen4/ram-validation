@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RAM test page</title>
+<style>
+  body { margin: 0; font: 14px system-ui, sans-serif; background: #f4f4f2; color: #111; }
+  header { padding: 12px 16px; background: #2a78d6; color: #fff; position: sticky; top: 0; }
+  canvas { display: block; width: 100%; height: auto; margin: 8px 0; }
+  .card { margin: 8px 12px; padding: 10px; background: #fff; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+</style>
+</head>
+<body>
+<header id="h">RAM test page</header>
+<main id="m"></main>
+<script>
+// Deterministic heavy page: holds `mb` MB of JS typed arrays (partly random so it
+// compresses like real data), draws `canvas` large canvases and builds `dom` cards.
+const q = new URLSearchParams(location.search);
+const id = +(q.get('id') || 1), mb = +(q.get('mb') || 40);
+const dom = +(q.get('dom') || 3000), ncanvas = +(q.get('canvas') || 3);
+let seed = (id * 2654435761) >>> 0 || 1;
+function rnd() { seed ^= seed << 13; seed >>>= 0; seed ^= seed >>> 17; seed ^= seed << 5; seed >>>= 0; return seed; }
+window.keep = [];
+for (let i = 0; i < mb; i++) {
+  const a = new Uint32Array(262144);               // 1 MiB
+  for (let j = 0; j < a.length; j += 1024) {       // one 4 KiB page
+    for (let k = 0; k < 300; k++) a[j + k] = rnd();
+    a.fill(rnd(), j + 300, j + 1024);
+  }
+  keep.push(a);
+}
+const m = document.getElementById('m');
+for (let c = 0; c < ncanvas; c++) {
+  const cv = document.createElement('canvas');
+  cv.width = 1600; cv.height = 1600;
+  const g = cv.getContext('2d');
+  for (let i = 0; i < 2500; i++) {
+    g.fillStyle = 'hsl(' + (rnd() % 360) + ',60%,' + (30 + rnd() % 50) + '%)';
+    const x = rnd() % 1600, y = rnd() % 1600, r = 4 + rnd() % 60;
+    if (i & 1) g.fillRect(x, y, r * 2, r); else { g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); }
+  }
+  m.appendChild(cv);
+}
+const frag = document.createDocumentFragment();
+for (let i = 0; i < dom; i++) {
+  const d = document.createElement('div');
+  d.className = 'card';
+  d.textContent = 'Page ' + id + ' item ' + i + ' ' + rnd().toString(36) + rnd().toString(36);
+  frag.appendChild(d);
+}
+m.appendChild(frag);
+document.getElementById('h').textContent = 'RAM test page ' + id + ' - ' + mb + ' MB JS, ' + dom + ' cards';
+document.title = 'RAM test ' + id;
+</script>
+</body>
+</html>
